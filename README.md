@@ -62,7 +62,9 @@ new-data-collector/
 │   ├── models/                 # 공통 모델
 │   ├── utils/                  # 유틸리티 함수
 │   └── clients/                # 외부 서비스 클라이언트
-└── scripts/                    # 유틸리티 스크립트
+├── scripts/                    # 유틸리티 스크립트
+├── .gitignore                  # Git 무시 파일 설정
+└── .markdownlint.json          # 마크다운 린트 설정
 ```
 
 ## 설치 및 실행
@@ -80,6 +82,15 @@ new-data-collector/
 git clone https://github.com/your-username/new-data-collector.git
 cd new-data-collector
 
+# 가상 환경 설정 (선택 사항)
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# 또는
+venv\Scripts\activate  # Windows
+
+# 의존성 설치 (로컬 개발 시)
+pip install -r requirements.txt
+
 # Docker Compose로 개발 환경 실행
 docker-compose -f infrastructure/docker/docker-compose.dev.yml up
 ```
@@ -90,6 +101,16 @@ docker-compose -f infrastructure/docker/docker-compose.dev.yml up
 # Kubernetes 배포
 kubectl apply -f infrastructure/kubernetes/
 ```
+
+## 개발 가이드
+
+각 마이크로서비스는 독립적으로 개발 및 테스트할 수 있습니다. 서비스별 개발 가이드는 해당 서비스 디렉토리의 README.md 파일을 참조하세요.
+
+### 코드 스타일
+
+이 프로젝트는 다음과 같은 코드 스타일 가이드를 따릅니다:
+- Python: PEP 8
+- 문서: Markdown 린트 규칙 (.markdownlint.json)
 
 ## 기여 가이드
 
