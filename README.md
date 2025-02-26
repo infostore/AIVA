@@ -10,6 +10,7 @@
 - **보안 강화** 및 인증 시스템 개선
 - **모니터링 및 로깅 시스템** 도입
 - **CI/CD 파이프라인** 구축
+- **Next.js 기반 웹 클라이언트** 추가로 사용자 인터페이스 제공
 
 ## 기술 스택
 
@@ -24,6 +25,7 @@
 - **모니터링**: Prometheus, Grafana
 - **로깅**: ELK Stack (Elasticsearch, Logstash, Kibana)
 - **CI/CD**: GitHub Actions
+- **프론트엔드**: Next.js, TypeScript, Tailwind CSS
 
 ## 아키텍처 개요
 
@@ -35,6 +37,7 @@ New Data Collector는 다음과 같은 마이크로서비스로 구성되어 있
 4. **Data Storage Service**: 데이터 저장 및 관리
 5. **Analysis Service**: 데이터 분석 및 지표 계산
 6. **Notification Service**: 사용자 알림 관리
+7. **Web Client**: Next.js 기반의 웹 클라이언트 인터페이스
 
 각 서비스는 독립적으로 배포 가능하며, 서비스 간 통신은 REST API 또는 메시지 큐를 통해 이루어집니다.
 
@@ -52,7 +55,8 @@ new-data-collector/
 │   ├── data-collection-service/ # 데이터 수집 서비스
 │   ├── data-storage-service/   # 데이터 저장 서비스
 │   ├── analysis-service/       # 데이터 분석 서비스
-│   └── notification-service/   # 알림 서비스
+│   ├── notification-service/   # 알림 서비스
+│   └── web-client/             # Next.js 기반 웹 클라이언트
 ├── infrastructure/             # 인프라 설정
 │   ├── docker/                 # Docker 설정
 │   ├── kubernetes/             # Kubernetes 설정
@@ -74,6 +78,7 @@ new-data-collector/
 - Docker 및 Docker Compose
 - Kubernetes (선택 사항)
 - Python 3.11 이상
+- Node.js 18.0.0 이상 (웹 클라이언트용)
 
 ### 개발 환경 설정
 
@@ -93,6 +98,11 @@ pip install -r requirements.txt
 
 # Docker Compose로 개발 환경 실행
 docker-compose -f infrastructure/docker/docker-compose.dev.yml up
+
+# 웹 클라이언트 실행 (별도 터미널에서)
+cd services/web-client
+npm install
+npm run dev
 ```
 
 ### 프로덕션 배포
@@ -110,6 +120,7 @@ kubectl apply -f infrastructure/kubernetes/
 
 이 프로젝트는 다음과 같은 코드 스타일 가이드를 따릅니다:
 - Python: PEP 8
+- JavaScript/TypeScript: ESLint, Prettier
 - 문서: Markdown 린트 규칙 (.markdownlint.json)
 
 ## 기여 가이드
