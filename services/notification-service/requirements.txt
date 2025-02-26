@@ -1,0 +1,31 @@
+# 웹 프레임워크
+fastapi>=0.103.1
+uvicorn>=0.23.2
+pydantic>=2.3.0
+pydantic-settings>=2.0.3
+email-validator>=2.0.0
+
+# 데이터베이스
+sqlalchemy>=2.0.20
+psycopg2-binary>=2.9.7
+alembic>=1.12.0
+
+# 비동기 작업
+asyncio>=3.4.3
+celery>=5.3.4
+redis>=5.0.1
+
+# 메시징
+aio-pika>=9.3.0
+
+# 이메일
+jinja2>=3.1.2
+python-multipart>=0.0.6
+aiosmtplib>=2.0.2
+
+# 유틸리티
+python-dotenv>=1.0.0
+tenacity>=8.2.3
+
+# 로깅
+loguru>=0.7.0 

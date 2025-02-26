@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  data-collection-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: data-collection-service
+    restart: always
+    ports:
+      - "8002:8002"
+    environment:
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=data_collection_service
+      - POSTGRES_PORT=5432
+      - DEBUG=true
+      - BACKEND_CORS_ORIGINS=["http://localhost:3000", "http://localhost:8000"]
+      - STOCK_API_BASE_URL=https://api.example.com/stocks
+      - STOCK_API_KEY=your-api-key-here
+      - DATA_STORAGE_SERVICE_URL=http://data-storage-service:8003/api/v1
+    volumes:
+      - ./:/app
+    depends_on:
+      - postgres
+      - rabbitmq
+    networks:
+      - data-collector-network
+
+  postgres:
+    image: postgres:15
+    container_name: data-collection-postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=data_collection_service
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - data-collector-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: data-collection-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - data-collector-network
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+
+networks:
+  data-collector-network:
+    driver: bridge 

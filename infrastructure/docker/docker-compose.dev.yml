@@ -1,0 +1,242 @@
+version: '3.8'
+
+services:
+  # API Gateway Service
+  api-gateway:
+    build:
+      context: ../../services/api-gateway
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../services/api-gateway:/app
+    environment:
+      - ENVIRONMENT=development
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - DATA_COLLECTION_SERVICE_URL=http://data-collection-service:8002
+      - DATA_STORAGE_SERVICE_URL=http://data-storage-service:8003
+      - ANALYSIS_SERVICE_URL=http://analysis-service:8004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8005
+      - REDIS_HOST=redis
+    depends_on:
+      - auth-service
+      - data-collection-service
+      - data-storage-service
+      - analysis-service
+      - notification-service
+      - redis
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ../../services/auth-service
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8001:8001"
+    volumes:
+      - ../../services/auth-service:/app
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/auth_db
+      - REDIS_HOST=redis
+      - SECRET_KEY=dev_secret_key
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60
+    depends_on:
+      - postgres
+      - redis
+
+  # Data Collection Service
+  data-collection-service:
+    build:
+      context: ../../services/data-collection-service
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8002:8002"
+    volumes:
+      - ../../services/data-collection-service:/app
+    environment:
+      - ENVIRONMENT=development
+      - RABBITMQ_HOST=rabbitmq
+      - DATA_STORAGE_SERVICE_URL=http://data-storage-service:8003
+    depends_on:
+      - rabbitmq
+      - data-storage-service
+
+  # Data Collection Worker
+  data-collection-worker:
+    build:
+      context: ../../services/data-collection-service
+      dockerfile: Dockerfile.worker.dev
+    volumes:
+      - ../../services/data-collection-service:/app
+    environment:
+      - ENVIRONMENT=development
+      - RABBITMQ_HOST=rabbitmq
+      - DATA_STORAGE_SERVICE_URL=http://data-storage-service:8003
+    depends_on:
+      - rabbitmq
+      - data-storage-service
+    command: celery -A worker worker --loglevel=info
+
+  # Data Storage Service
+  data-storage-service:
+    build:
+      context: ../../services/data-storage-service
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8003:8003"
+    volumes:
+      - ../../services/data-storage-service:/app
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/storage_db
+      - REDIS_HOST=redis
+    depends_on:
+      - postgres
+      - redis
+
+  # Analysis Service
+  analysis-service:
+    build:
+      context: ../../services/analysis-service
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8004:8004"
+    volumes:
+      - ../../services/analysis-service:/app
+    environment:
+      - ENVIRONMENT=development
+      - DATA_STORAGE_SERVICE_URL=http://data-storage-service:8003
+      - REDIS_HOST=redis
+    depends_on:
+      - data-storage-service
+      - redis
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ../../services/notification-service
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8005:8005"
+    volumes:
+      - ../../services/notification-service:/app
+    environment:
+      - ENVIRONMENT=development
+      - RABBITMQ_HOST=rabbitmq
+      - REDIS_HOST=redis
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+    depends_on:
+      - rabbitmq
+      - redis
+      - mailhog
+
+  # PostgreSQL
+  postgres:
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_MULTIPLE_DATABASES=auth_db,storage_db
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+
+  # Prometheus (모니터링)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+
+  # Grafana (모니터링 대시보드)
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+
+  # Elasticsearch (로깅)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  # Kibana (로그 시각화)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.0
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+  # Logstash (로그 수집)
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.17.0
+    ports:
+      - "5044:5044"
+      - "9600:9600"
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+    depends_on:
+      - elasticsearch
+
+  # MailHog (이메일 테스트)
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  prometheus_data:
+  grafana_data:
+  elasticsearch_data: 
